@@ -129,45 +129,63 @@ float notes[] = {
   12543.8539514160 // 127
 };
 
+//! Our little onboard LED
 int ledPin = 13;
+
+//! The stepper motor controller's step pin
 int stpPin = 12;
 
+//! Are we currently playing a note
 bool playing = false;
 
+//! The desired delay between motor steps to achieve the requested note/frequency
 float desired_delay = 0.0;
-float curr_delay = 0;
 
+//! The current delay between motor steps
+float curr_delay = 0.0;
+
+//! The last note that was recived - used to decide when to turn off the motor
 byte last_note = 0;
 
+//! The speed at which the controller will glide from one note to the next
+/*! Units is the number of microseconds to add to curr_delay per iteration
+    until it reaches desired_delay */
 int const glide = 10;
 
-float note2delay(byte note)
+//! Convert a midi note to the number of microseconds we need to delay
+float note2microseconds(byte note)
 {
   return 1.0 / notes[note] * 1000000.0;
 }
 
+//! Called when we recieve a MIDI note-on event
 void OnNoteOn(byte channel, byte note, byte velocity)
 {
   last_note = note;
-  desired_delay = note2delay(note);
 
-  if(!playing) curr_delay = desired_delay + 500;
+  // Set the desired delay by converting the MIDI note
+  desired_delay = note2microseconds(note);
+
+  // If we're not currently playing, then we should try to accelerate
+  // into the requested note
+  if(!playing)
+    curr_delay = desired_delay + 600;
 
   playing = true;
   digitalWrite(ledPin, HIGH);
 }
 
+//! Called when we recieve a MIDI note-off event
 void OnNoteOff(byte channel, byte note, byte velocity)
 {
+
+  // Only turn off the last requested note
+  // This makes it more comfortable to jam on the keyboard
   if(note == last_note)
   {
     playing = false;
     digitalWrite(ledPin, LOW);
   }
-}
-
-void OnPitchChange(byte channel, int pitch)
-{
 }
 
 void setup() {                
